@@ -1,7 +1,7 @@
 import { useDrawSettingsStore } from "../../../../store/useDrawSettingsStore";
 
 export function DrawToolbar() {
-  const { color, strokeWidth, /* isEraser, */ setColor, setStrokeWidth, /* setIsEraser, */ triggerClearCanvas } = useDrawSettingsStore();
+  const { color, strokeWidth, isEraser, setColor, setStrokeWidth, setIsEraser, triggerClearCanvas } = useDrawSettingsStore();
 
   const colors = ['#000000', '#ff0000', '#00ff00', '#0000ff', '#ffaa00'];
 
@@ -26,12 +26,12 @@ export function DrawToolbar() {
       </div>
 
       {/* bouton gomme */}
-      {/* <button 
+      <button 
         onClick={() => setIsEraser(!isEraser)}
         className={`p-2 rounded border ${isEraser ? 'bg-blue-100 border-blue-500' : 'bg-gray-50'}`}
       >
         {isEraser ? '🧽 Gomme Active' : '✏️ Pinceau'}
-      </button> */}
+      </button>
 
       {/* sélection de la taille */}
       <div className="flex items-center gap-2">
@@ -45,12 +45,12 @@ export function DrawToolbar() {
       </div>
 
       {/* btn tt effacer */}
-      {/* <button 
+      <button 
         onClick={triggerClearCanvas}
         className="ml-auto p-2 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
       >
         🗑️ Tout effacer
-      </button> */}
+      </button>
     </div>
   );
 }

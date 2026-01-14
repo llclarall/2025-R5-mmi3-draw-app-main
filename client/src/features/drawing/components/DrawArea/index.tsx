@@ -25,7 +25,7 @@ export function DrawArea() {
 
 
   // tout effacer en local
-  /* useEffect(() => {
+  useEffect(() => {
   if (clearCanvasSignal > 0) {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -35,7 +35,7 @@ export function DrawArea() {
       
     }
   }
-  }, [clearCanvasSignal]); */
+  }, [clearCanvasSignal]);
 
 
   
