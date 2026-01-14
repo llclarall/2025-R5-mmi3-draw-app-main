@@ -14,6 +14,7 @@ export const CLIENT_TO_SERVER_EVENTS_NAMES = {
   DRAW_START: 'draw:start',
   DRAW_MOVE: 'draw:move',
   DRAW_END: 'draw:end',
+  DRAW_CLEAR: 'draw:clear',
 }
 
 export const SERVER_TO_CLIENT_EVENTS_NAMES = {
@@ -25,4 +26,5 @@ export const SERVER_TO_CLIENT_EVENTS_NAMES = {
   DRAW_START: 'draw:start',
   DRAW_MOVE: 'draw:move',
   DRAW_END: 'draw:end',
+  DRAW_CLEAR: 'draw:clear',
 }

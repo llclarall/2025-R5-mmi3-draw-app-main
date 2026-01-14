@@ -24,17 +24,18 @@ export function DrawArea() {
   }, []);
 
 
-  // tout effacer en local
+  // tout effacer
   useEffect(() => {
-  if (clearCanvasSignal > 0) {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+    if (clearCanvasSignal > 0) {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        SocketManager.emit('draw:clear');
+        otherUserStrokes.current.clear();
+      }
     }
-  }
   }, [clearCanvasSignal]);
 
 
@@ -155,6 +156,10 @@ export function DrawArea() {
     otherUserStrokes.current.delete(payload.socketId);
   }, []);
 
+  const onOtherUserDrawClear = useCallback(() => {
+    otherUserStrokes.current.clear();
+  }, []);
+
   const getAllStrokes = useCallback(() => {
     SocketManager.get('strokes').then((data) => {
       if (!data || !data.strokes) return;
@@ -182,12 +187,14 @@ export function DrawArea() {
     SocketManager.listen('draw:start', onOtherUserDrawStart);
     SocketManager.listen('draw:move', onOtherUserDrawMove);
     SocketManager.listen('draw:end', onOtherUserDrawEnd);
+    SocketManager.listen('draw:clear', onOtherUserDrawClear);
     return () => {
       SocketManager.off('draw:start');
       SocketManager.off('draw:move');
       SocketManager.off('draw:end');
+      SocketManager.off('draw:clear');
     };
-  }, [onOtherUserDrawStart, onOtherUserDrawMove, onOtherUserDrawEnd]);
+  }, [onOtherUserDrawStart, onOtherUserDrawMove, onOtherUserDrawEnd, onOtherUserDrawClear]);
 
   useEffect(() => {
     getAllStrokes();

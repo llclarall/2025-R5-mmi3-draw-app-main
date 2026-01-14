@@ -1,6 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { addUser, editUser, getUsers, User, UserWithSocketId, removeUser } from './user';
-import { addDrawStroke, updateDrawStroke, completeDrawStroke,  getAllStrokes, startAutomaticCleanup } from './draw';
+import { addDrawStroke, updateDrawStroke, completeDrawStroke, getAllStrokes, startAutomaticCleanup, clearAllStrokes } from './draw';
 import { ENDPOINTS, CLIENT_TO_SERVER_EVENTS_NAMES, SERVER_TO_CLIENT_EVENTS_NAMES } from './config';
 import express from 'express';
 
@@ -121,6 +121,15 @@ export const handleAppForClient = (app: ReturnType<typeof express>, io: Server, 
     }
   });
 
+  // effacer tous les dessins
+  socket.on(CLIENT_TO_SERVER_EVENTS_NAMES.DRAW_CLEAR, () => {
+    logListen(CLIENT_TO_SERVER_EVENTS_NAMES.DRAW_CLEAR, {});
+    
+    clearAllStrokes();
+    
+    emitToAllButSender(SERVER_TO_CLIENT_EVENTS_NAMES.DRAW_CLEAR, {});
+  });
+
   app.get(ENDPOINTS.GET_USERS, (req, res) => {
     try {
       console.log('ENDPOINTS.GET_USERS', ENDPOINTS.GET_USERS)
@@ -132,6 +141,7 @@ export const handleAppForClient = (app: ReturnType<typeof express>, io: Server, 
       res.status(500).json({ error: 'Failed to fetch users' });
     }
   });
+  
 
   /* Endpoint pour récupérer tous les dessins existants */
   app.get(ENDPOINTS.GET_STROKES, (req, res) => {

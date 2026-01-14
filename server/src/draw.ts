@@ -125,3 +125,12 @@ export const clearAllStrokes = (): void => {
   completedStrokes = [];
   console.log('All strokes cleared');
 };
+
+
+// effacer ts les traits
+
+export const clearStrokes = (): void => {
+  activeStrokes.clear();
+  completedStrokes = [];
+  console.log('🗑️ All strokes cleared');
+}
