@@ -51,31 +51,26 @@ const drawLine = useCallback((
   const ctx = canvasRef.current.getContext('2d');
   if (!ctx) return;
 
-  ctx.save();
+  // Calculer la taille logique actuelle du canvas
+  const rect = canvasRef.current.getBoundingClientRect();
+  const width = rect.width;
+  const height = rect.height;
 
-  if (eraserMode) {
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.strokeStyle = 'rgba(0,0,0,1)'; // Dummy color for eraser
-    ctx.lineWidth = lineWidth || strokeWidth;
-  } else {
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = lineColor || color;
-    ctx.lineWidth = lineWidth || strokeWidth;
-  }
-  
+  ctx.save();
+  ctx.globalCompositeOperation = eraserMode ? 'destination-out' : 'source-over';
+  ctx.strokeStyle = eraserMode ? 'rgba(0,0,0,1)' : (lineColor || color);
+  ctx.lineWidth = lineWidth || strokeWidth;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
   ctx.beginPath();
   if (from) {
-    ctx.moveTo(from.x, from.y);
+    ctx.moveTo(from.x * width, from.y * height);
   } else {
-    ctx.moveTo(to.x, to.y);
+    ctx.moveTo(to.x * width, to.y * height);
   }
-  ctx.lineTo(to.x, to.y);
+  ctx.lineTo(to.x * width, to.y * height);
   ctx.stroke();
-  ctx.closePath();
-  
   ctx.restore();
 }, [color, strokeWidth]);
 
@@ -84,14 +79,21 @@ const drawLine = useCallback((
     if (!canvasRef.current || !lastPointRef.current) return;
 
     const coordinates = getCanvasCoordinates(e);
-    
-    drawLine(lastPointRef.current, coordinates, undefined, undefined, isEraser);
+    const canvasRect = canvasRef.current.getBoundingClientRect();
 
-    lastPointRef.current = coordinates;
+    // Normaliser les coordonnées entre 0 et 1
+    const normalizedX = coordinates.x / canvasRect.width;
+    const normalizedY = coordinates.y / canvasRect.height;
+
+    const normalizedPoint = { x: normalizedX, y: normalizedY };
+    
+    drawLine(lastPointRef.current, normalizedPoint, undefined, undefined, isEraser);
+
+    lastPointRef.current = normalizedPoint;
 
     SocketManager.emit('draw:move', {
-      x: coordinates.x,
-      y: coordinates.y
+      x: normalizedX,
+      y: normalizedY
     });
 
   }, [drawLine, getCanvasCoordinates, isEraser]);
@@ -107,17 +109,25 @@ const drawLine = useCallback((
     canvasRef.current.removeEventListener('mouseup', onMouseUp);
   }, [onMouseMove]);
 
-  const onMouseDown: React.MouseEventHandler<HTMLCanvasElement> = useCallback((e) => {
+    const onMouseDown: React.MouseEventHandler<HTMLCanvasElement> = useCallback((e) => {
     if (!canUserDraw) return;
 
     const coordinates = getCanvasCoordinates(e);
-    lastPointRef.current = coordinates; 
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
     
-    drawLine(null, coordinates, undefined, undefined, isEraser);
+    if (!canvasRect) return;
+
+    const normalizedX = coordinates.x / canvasRect.width;
+    const normalizedY = coordinates.y / canvasRect.height;
+    const normalizedPoint = { x: normalizedX, y: normalizedY };
+
+    lastPointRef.current = normalizedPoint; 
+    
+    drawLine(null, normalizedPoint, undefined, undefined, isEraser);
 
     SocketManager.emit('draw:start', {
-      x: coordinates.x,
-      y: coordinates.y,
+      x: normalizedX,
+      y: normalizedY,
       strokeWidth: strokeWidth,
       color: color,
       isEraser: isEraser
@@ -129,21 +139,27 @@ const drawLine = useCallback((
 
   // --- DPR, Resize, Sockets ---
   const setCanvasDimensions = useCallback(() => {
-    if (!canvasRef.current || !parentRef.current) return;
-    const dpr = window.devicePixelRatio || 1;
-    const parentWidth = parentRef.current?.clientWidth;
-    const canvasWidth = parentWidth; 
-    const canvasHeight = Math.round(parentWidth * 9 / 16); 
-    
-    // Réinitialiser les dimensions du canvas (efface le contenu)
-    canvasRef.current.width = dpr * canvasWidth;
-    canvasRef.current.height = dpr * canvasHeight; 
-    parentRef.current.style.setProperty('--canvas-width', `${canvasWidth}px`);
-    parentRef.current.style.setProperty('--canvas-height', `${canvasHeight}px`);
-    
-    const ctx = canvasRef.current.getContext("2d");
-    if (ctx) ctx.scale(dpr, dpr);
-  }, []);
+  if (!canvasRef.current || !parentRef.current) return;
+  
+  const dpr = window.devicePixelRatio || 1;
+  const parentWidth = parentRef.current.clientWidth;
+  const canvasWidth = parentWidth; 
+  const canvasHeight = Math.round(parentWidth * 9 / 16); 
+
+  // Mise à jour des dimensions réelles (pixels)
+  canvasRef.current.width = dpr * canvasWidth;
+  canvasRef.current.height = dpr * canvasHeight; 
+  
+  // Mise à jour des dimensions d'affichage (CSS)
+  parentRef.current.style.setProperty('--canvas-width', `${canvasWidth}px`);
+  parentRef.current.style.setProperty('--canvas-height', `${canvasHeight}px`);
+  
+  const ctx = canvasRef.current.getContext("2d");
+  if (ctx) {
+    ctx.scale(dpr, dpr);
+    // On ne fait PAS de drawImage ici, sinon on double le dessin avec getAllStrokes
+  }
+}, []);
 
 
     const drawOtherUserPoints = useCallback((socketId: string, points: Point[], sWidth?: number, sColor?: string, sIsEraser?: boolean) => {
@@ -176,8 +192,15 @@ const drawLine = useCallback((
     otherUserStrokes.current.delete(payload.socketId);
   }, []);
 
+  // efface tout chez tout le monde
   const onOtherUserDrawClear = useCallback(() => {
-    otherUserStrokes.current.clear();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      otherUserStrokes.current.clear();
+    }
   }, []);
 
   const onOtherUserDrawStart = useCallback((payload: DrawStroke) => {
