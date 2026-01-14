@@ -10,6 +10,8 @@ type DrawStroke = {
   strokeWidth: number;
   isComplete: boolean;
   timestamp: number;
+  isEraser: boolean;
+  socketId: string;
 }
 
 let activeStrokes: Map<string, DrawStroke> = new Map();
@@ -45,18 +47,20 @@ export const stopAutomaticCleanup = (): void => {
 };
 
 // Ajouter un nouveau trait de dessin
-export const addDrawStroke = (userId: string, startPoint: DrawPoint, color: string, strokeWidth: number): DrawStroke => {
+export const addDrawStroke = (userId: string, startPoint: DrawPoint, color: string, strokeWidth: number, isEraser: boolean): DrawStroke => {
   const stroke: DrawStroke = {
     userId,
     points: [startPoint],
     color,
     strokeWidth,
     isComplete: false,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    isEraser,
+    socketId: userId
   };
   
   activeStrokes.set(userId, stroke);
-  console.log('-> New draw stroke started', { userId, startPoint, color, strokeWidth });
+  console.log('-> New draw stroke started', { userId, startPoint, color, strokeWidth, isEraser });
   
   return stroke;
 };
@@ -127,8 +131,7 @@ export const clearAllStrokes = (): void => {
 };
 
 
-// effacer ts les traits
-
+// effacer ts les traits actifs et complétés
 export const clearStrokes = (): void => {
   activeStrokes.clear();
   completedStrokes = [];

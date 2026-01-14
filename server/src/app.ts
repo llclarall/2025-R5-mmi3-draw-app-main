@@ -81,20 +81,20 @@ export const handleAppForClient = (app: ReturnType<typeof express>, io: Server, 
 
     /* === ÉVÉNEMENTS DE GESTION DES DESSINS === */
   
-  socket.on(CLIENT_TO_SERVER_EVENTS_NAMES.DRAW_START, (data: { x: number; y: number; color: string; strokeWidth: number }) => {
+  socket.on(CLIENT_TO_SERVER_EVENTS_NAMES.DRAW_START, (data: { x: number; y: number; color: string; strokeWidth: number; isEraser: boolean }) => {
     logListen(CLIENT_TO_SERVER_EVENTS_NAMES.DRAW_START, data);
     
-    const { x, y, color, strokeWidth } = data;
+    const { x, y, color, strokeWidth, isEraser } = data;
     const userId = socket.id;
     
-    const stroke = addDrawStroke(userId, { x, y }, color, strokeWidth);
+    const stroke = addDrawStroke(userId, { x, y }, color, strokeWidth, isEraser);
     editUser(userId, { hasDrawn: true });
     
     emitToAll(SERVER_TO_CLIENT_EVENTS_NAMES.USERS_UPDATED, { users: getUsers() });
 
-    
     emitToAllButSender(SERVER_TO_CLIENT_EVENTS_NAMES.DRAW_START, stroke);
   });
+
 
   socket.on(CLIENT_TO_SERVER_EVENTS_NAMES.DRAW_MOVE, (data: { x: number; y: number }) => {
     logListen(CLIENT_TO_SERVER_EVENTS_NAMES.DRAW_MOVE, data);

@@ -40,43 +40,45 @@ export function DrawArea() {
 
 
   
-  const drawLine = useCallback((
-    from: { x: number, y: number } | null,
-    to: { x: number, y: number },
-    lineColor?: string, 
-    lineWidth?: number,
-    isEraser?: boolean
-  ) => {
-    if (!canvasRef.current) return;
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
+const drawLine = useCallback((
+  from: { x: number, y: number } | null,
+  to: { x: number, y: number },
+  lineColor?: string, 
+  lineWidth?: number,
+  eraserMode?: boolean
+) => {
+  if (!canvasRef.current) return;
+  const ctx = canvasRef.current.getContext('2d');
+  if (!ctx) return;
 
-    const activeEraser = isEraser !== undefined ? isEraser : false;
+  ctx.save();
 
-    ctx.save();
-
-    if (activeEraser) {
-      ctx.globalCompositeOperation = 'destination-out';
-    } else {
-      ctx.globalCompositeOperation = 'source-over';
-    } 
-
-
+  if (eraserMode) {
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.strokeStyle = 'rgba(0,0,0,1)'; // Dummy color for eraser
+    ctx.lineWidth = lineWidth || strokeWidth;
+  } else {
+    ctx.globalCompositeOperation = 'source-over';
     ctx.strokeStyle = lineColor || color;
     ctx.lineWidth = lineWidth || strokeWidth;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+  }
+  
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
 
-    ctx.beginPath();
-    if (from) {
-      ctx.moveTo(from.x, from.y);
-    } else {
-      ctx.moveTo(to.x, to.y);
-    }
-    ctx.lineTo(to.x, to.y);
-    ctx.stroke();
-    ctx.closePath();
-  }, [color, strokeWidth]);
+  ctx.beginPath();
+  if (from) {
+    ctx.moveTo(from.x, from.y);
+  } else {
+    ctx.moveTo(to.x, to.y);
+  }
+  ctx.lineTo(to.x, to.y);
+  ctx.stroke();
+  ctx.closePath();
+  
+  ctx.restore();
+}, [color, strokeWidth]);
+
 
   const onMouseMove = useCallback((e: MouseEvent) => {
     if (!canvasRef.current || !lastPointRef.current) return;
@@ -93,6 +95,7 @@ export function DrawArea() {
     });
 
   }, [drawLine, getCanvasCoordinates, isEraser]);
+
 
   const onMouseUp = useCallback(() => {
     if (!canvasRef.current) return;
@@ -131,22 +134,39 @@ export function DrawArea() {
     const parentWidth = parentRef.current?.clientWidth;
     const canvasWidth = parentWidth; 
     const canvasHeight = Math.round(parentWidth * 9 / 16); 
+    
+    // Réinitialiser les dimensions du canvas (efface le contenu)
     canvasRef.current.width = dpr * canvasWidth;
     canvasRef.current.height = dpr * canvasHeight; 
     parentRef.current.style.setProperty('--canvas-width', `${canvasWidth}px`);
     parentRef.current.style.setProperty('--canvas-height', `${canvasHeight}px`);
+    
     const ctx = canvasRef.current.getContext("2d");
-    if (ctx) ctx.scale(dpr, dpr); 
+    if (ctx) ctx.scale(dpr, dpr);
   }, []);
 
-  const drawOtherUserPoints = useCallback((socketId: string, points: Point[], sWidth?: number, sColor?: string, sIsEraser?: boolean) => {
-    const previousPoints = otherUserStrokes.current.get(socketId) || [];
+
+    const drawOtherUserPoints = useCallback((socketId: string, points: Point[], sWidth?: number, sColor?: string, sIsEraser?: boolean) => {
     points.forEach((point, index) => {
-      if (previousPoints[index]) return;
       const from = index === 0 ? null : points[index - 1];
       drawLine(from, point, sColor, sWidth, sIsEraser);
     });
+    // met à jour les points du trait en cours pour cet utilisateur
+    otherUserStrokes.current.set(socketId, points);
   }, [drawLine]);
+
+  const getAllStrokes = useCallback(() => {
+    // effacer les traits des autres utilisateurs avant de redessiner
+    otherUserStrokes.current.clear();
+    
+    SocketManager.get('strokes').then((data) => {
+      if (!data || !data.strokes) return;
+      (data.strokes as DrawStroke[]).forEach((stroke: DrawStroke) => {
+        drawOtherUserPoints(stroke.socketId, stroke.points, stroke.strokeWidth, stroke.color, stroke.isEraser);
+      });
+    });
+  }, [drawOtherUserPoints]);
+
 
   const onOtherUserDrawMove = useCallback((payload: DrawStroke) => {
     drawOtherUserPoints(payload.socketId, payload.points, payload.strokeWidth, payload.color, payload.isEraser);
@@ -160,23 +180,16 @@ export function DrawArea() {
     otherUserStrokes.current.clear();
   }, []);
 
-  const getAllStrokes = useCallback(() => {
-    SocketManager.get('strokes').then((data) => {
-      if (!data || !data.strokes) return;
-      (data.strokes as DrawStroke[]).forEach((stroke: DrawStroke) => {
-        drawOtherUserPoints(stroke.socketId, stroke.points, stroke.strokeWidth, stroke.color, stroke.isEraser);
-      });
-    });
-  }, [drawOtherUserPoints]);
-  
   const onOtherUserDrawStart = useCallback((payload: DrawStroke) => {
     drawOtherUserPoints(payload.socketId, payload.points, payload.strokeWidth, payload.color, payload.isEraser);
     otherUserStrokes.current.set(payload.socketId, payload.points);
   }, [drawOtherUserPoints]);
 
+
   useEffect(() => {
     const resizeObserver = new ResizeObserver(() => {
       setCanvasDimensions();
+      // Redraw all strokes from server after resize
       getAllStrokes();
     });
     if (parentRef.current) resizeObserver.observe(parentRef.current);
