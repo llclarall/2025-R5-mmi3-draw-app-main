@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useMyUserStore } from "../store/useMyUserStore";
 import { createMyUser } from "../utils/create-my-user";
 import { SocketManager } from "../../../shared/services/SocketManager";
@@ -17,9 +17,10 @@ export const useJoinMyUser = () => {
   }, [setMyUser]);
 
 
-  const joinMyUser = () => {
-    SocketManager.emit("myUser:join", createMyUser() );
-  }
+const joinMyUser = useCallback((customUsername?: string) => {
+    const user = createMyUser(customUsername);
+    SocketManager.emit("myUser:join", user);
+  }, []);
   
   return { joinMyUser };
 }

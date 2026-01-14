@@ -1,8 +1,9 @@
+import { UserAvatar } from '../UserAvatar';
+
 export type UserListProps = {
   users: {
     id: string;
     username: string;
-    avatar: string;
   }[] /* Ici je précise explicitement que j'attends non pas un type User, mais un un array d'objets avec une clé id, username & avatar. --> Ca rend mes composants bien plus indépendants & réutilisables */
 }
 
@@ -15,7 +16,8 @@ export function UserList({ users }: UserListProps){
         {users.length > 0 ? 
           users.map((user) => (
             <li className="list-row items-center" key={user.id}>
-              <div><img className="size-8 rounded-box" src={user.avatar} /></div>
+              <div>
+                <UserAvatar username={user.username} size="md" /></div>
               <div>
                 <div className="text-xs uppercase font-semibold">{user.username}</div>
               </div>

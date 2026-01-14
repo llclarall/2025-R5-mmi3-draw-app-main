@@ -34,10 +34,14 @@ const DEFAULT_USERS = [
   }
 ];
 
-export const createMyUser = () => {
-  const { username, avatar } = DEFAULT_USERS[Math.floor(Math.random() * DEFAULT_USERS.length)];
-  return {
-    username,
-    avatar
-  };
-}
+export const createMyUser = (customUsername?: string) => {
+  if (customUsername) {
+    return {
+      username: customUsername,
+      avatar: `https://api.dicebear.com/9.x/glass/svg?seed=${customUsername}`
+    };
+  }
+
+  const randomUser = DEFAULT_USERS[Math.floor(Math.random() * DEFAULT_USERS.length)];
+  return randomUser;
+};
